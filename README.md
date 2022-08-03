@@ -1,13 +1,22 @@
-# stringtests
+# Basic Split String tests
 
-Lib Required: 
+Prerequisites: 
 
-Google Benchmark: https://github.com/google/benchmark
+* Google Benchmark: https://github.com/google/benchmark
+* Vcpkg: https://github.com/microsoft/vcpkg
 
-Vcpkg: https://github.com/microsoft/vcpkg
-
-Install:
+## Install:
+```cmd
 vcpkg install benchmark --clean-after-build --triplet x64-windows-static-md
+```
+# Quick Start
 
-point VCPKG_ROOT env variable to where vcpkg is installed (root) 
+Point VCPKG_ROOT env variable to where vcpkg is installed (root) 
+```json
+    "environment":
+    {
+        "VCPKG_ROOT": "PATH"
+    }
+```
+replace `PATH`
 

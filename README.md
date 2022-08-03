@@ -11,7 +11,10 @@ vcpkg install benchmark --clean-after-build --triplet x64-windows-static-md
 ```
 # Quick Start
 
-Point VCPKG_ROOT env variable to where vcpkg is installed (root) 
+Point VCPKG_ROOT env variable to where vcpkg is installed (root)
+
+Can be done inside `CMakePresets.json`
+          
 ```json
     "environment":
     {

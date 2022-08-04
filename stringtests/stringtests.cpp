@@ -27,18 +27,19 @@ const std::string_view LoremIpsumStrv{ "Lorem ipsum dolor sit amet, consectetur 
 // std:string type
 const std::string LoremIpsumStr{ LoremIpsumStrv };
 
+// delims used to split the string (repeated delims are used to measure performance in other areas)
+auto g_delim = " orzabcd<eeeeeeeeeeeeeeeeeeee";
+
 #if ENABLE_BOOST_TESTS
 // boost::string_view type
 const boost::string_view LoremIpsumbStrv{ LoremIpsumStrv.data(), LoremIpsumStrv.size() };
+const boost::string_view g_bdelim{ g_delim };
 #endif
-
-// delims used to split the string
-auto g_delim = " orzabcd<eeeeeeeeeeeeeeeeeeee";
 
 
 // Custom made functions
 
-std::vector<std::string_view> SplitSV_custom1(const std::string_view str, std::string_view delims = " or")
+std::vector<std::string_view> SplitSV_custom1(const std::string_view str, const std::string_view delims = " or")
 {
 	std::vector<std::string_view> result;
 	result.reserve(str.length() / 2);
@@ -133,8 +134,8 @@ std::vector<std::string_view> SplitSV_custom3(const std::string_view str, const 
 	return output;
 }
 
-// combination
-std::vector<std::string_view> splitSV_parecido(std::string_view str, std::string_view delimeters)
+// Playing with intructions
+std::vector<std::string_view> splitSV_custom4a(const std::string_view str, const std::string_view delimeters = "or")
 {
 	std::vector<std::string_view> res;
 	res.reserve(str.length() / 2);
@@ -163,6 +164,34 @@ std::vector<std::string_view> splitSV_parecido(std::string_view str, std::string
 	return res;
 }
 
+// Removing gotos.
+std::vector<std::string_view> splitSV_custom4b(const std::string_view str, const std::string_view delimeters = "or")
+{
+	std::vector<std::string_view> res;
+	res.reserve(str.length() / 2);
+	const char* ptr = str.data();
+	size_t size = 0;
+
+	for (const char c : str)
+	{
+		for (const char d : delimeters)
+		{
+			if (c == d)
+			{
+				if (size)
+					res.emplace_back(ptr, size);
+				ptr += size + 1;
+				size = -1; // extra intruction every time this if happens (bad)
+				break;
+			}
+		}
+		++size;
+	}
+
+	if (size)
+		res.emplace_back(ptr, size);
+	return res;
+}
 
 static bool IsDelim(char tst, const char* DELIMS)
 {
@@ -211,7 +240,7 @@ std::vector<std::string> split_Cway(const std::string& str, const std::string& d
 
 #if ENABLE_BOOST_TESTS
 //uses string
-std::vector<std::string> split_S_boostToken(std::string strv, std::string_view delims = "or")
+std::vector<std::string> split_S_boostToken(const std::string& strv, const std::string_view delims = "or")
 {
 	std::vector<std::string> output;
 	output.reserve(strv.length() / 2);
@@ -280,7 +309,7 @@ std::vector<std::string> splitS_Std(const std::string& str, const std::string& d
 }
 
 // uses std::find_first_of with pointers
-std::vector<std::string> splitS_Std_Ptr(const std::string& str, const std::string& delims = "or")
+std::vector<std::string> splitS_Std_Ptr(const std::string& str, const std::string_view delims = "or")
 {
 	std::vector<std::string> output;
 	output.reserve(str.size() / 2);
@@ -379,7 +408,7 @@ std::vector<std::string_view> split_SVb_Std(std::string_view str, std::string_vi
 
 #if ENABLE_BOOST_TESTS
 //uses boost::string_view::find_first_of
-std::vector<boost::string_view> split_SV_Boost(boost::string_view strv, boost::string_view delims = "or")
+std::vector<boost::string_view> split_SV_Boost(const boost::string_view strv, const boost::string_view delims = "or")
 {
 	std::vector<boost::string_view> output;
 	output.reserve(strv.length() / 2);
@@ -429,7 +458,7 @@ static void bench_split_S_boostToken(benchmark::State& state) {
 
 static void bench_split_SV_Boost(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = split_SV_Boost(LoremIpsumbStrv, g_delim);
+		auto v = split_SV_Boost(LoremIpsumbStrv, g_bdelim);
 		benchmark::DoNotOptimize(v);
 	}
 }
@@ -492,9 +521,16 @@ static void bench_SplitSV_custom3(benchmark::State& state) {
 	}
 }
 
-static void bench_splitSV_parecido(benchmark::State& state) {
+static void bench_splitSV_custom4a(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = splitSV_parecido(LoremIpsumStrv, g_delim);
+		auto v = splitSV_custom4a(LoremIpsumStrv, g_delim);
+		benchmark::DoNotOptimize(v);
+	}
+}
+
+static void bench_splitSV_custom4b(benchmark::State& state) {
+	for (auto _ : state) {
+		auto v = splitSV_custom4b(LoremIpsumStrv, g_delim);
 		benchmark::DoNotOptimize(v);
 	}
 }
@@ -505,7 +541,8 @@ BENCHMARK(bench_split_Cway);
 BENCHMARK(bench_SplitSV_custom1);
 BENCHMARK(bench_SplitSV_custom2);
 BENCHMARK(bench_SplitSV_custom3);
-BENCHMARK(bench_splitSV_parecido);
+BENCHMARK(bench_splitSV_custom4a);
+BENCHMARK(bench_splitSV_custom4b);
 
 // StringView standard splits
 BENCHMARK(bench_split_SV);
@@ -572,20 +609,30 @@ int main(int argc, char* argv[])
 	std::cout << "Hello CMake." << std::endl;
 
 	std::vector<const char*> new_argv(argv, argv + argc);
-	new_argv.push_back("--benchmark_repetitions=1");
+	new_argv.push_back("--benchmark_repetitions=1"); argc += 1;
+	//new_argv.push_back("--benchmark_min_time=1"); argc += 1;
 	new_argv.push_back(nullptr);
 	argv = const_cast<char**>(new_argv.data()); // or &new_argv[0] if you are using an old compiler
-	argc = argc + 1;
 
 	//BENCHMARK(BM_boyer_moore_searcher);
 	//BENCHMARK(BM_boyer_moore_horspool_searcher);
 	//BENCHMARK(BM_default_searcher);
 
-
 	::benchmark::Initialize(&argc, argv);
 	::benchmark::RunSpecifiedBenchmarks();
+	::benchmark::Shutdown();
 
-	system("PAUSE");
+	/*
+	auto v = splitSV_custom4a(LoremIpsumStrv, g_delim);
+	for (auto a : v)
+		std::cout << a << " ";
+	std::cout << std::endl;
+	v = splitSV_custom4b(LoremIpsumStrv, g_delim);
+	for (auto a : v)
+		std::cout << a << " ";
+		*/
+
+	//system("PAUSE");
 
 	return 0;
 }

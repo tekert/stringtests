@@ -1,0 +1,10 @@
+{
+    "name": "stringtests",
+    "version-string": "0.1.0",
+    "dependencies":
+    [
+        "benchmark",
+        "boost-utility",
+        "boost-tokenizer"
+    ]
+}

@@ -17,7 +17,7 @@ find_package(benchmark CONFIG REQUIRED)
 target_link_libraries(stringtests PRIVATE benchmark::benchmark benchmark::benchmark_main)
 
 # Find boost headers (any version)
-find_package(Boost)
+find_package(Boost QUIET)
 if ( Boost_FOUND )
     target_compile_definitions(stringtests PUBLIC ENABLE_BOOST_TESTS=1)
     target_include_directories(stringtests PRIVATE ${Boost_INCLUDE_DIRS})

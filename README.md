@@ -6,14 +6,30 @@
 * Vcpkg: https://github.com/microsoft/vcpkg
 
 ### Install Prerequisites:
+Windows
 ```cmd
-vcpkg install benchmark --clean-after-build --triplet x64-windows-static-md
+vcpkg install benchmark --triplet x64-windows-static-md
+```
+(Optional)
+```cmd
+vcpkg install boost-tokenizer --triplet x64-windows-static-md
+vcpkg install boost-utility --triplet x64-windows-static-md
+```
+
+Linux
+```cmd
+vcpkg install benchmark
+```
+(Optional)
+```cmd
+vcpkg install boost-tokenizer
+vcpkg install boost-utility
 ```
 ### Compile
 
-Point VCPKG_ROOT env variable to where vcpkg is installed (root)
+Point VCPKG_ROOT env variable to where vcpkg is installed (root) (Windows and Linux)
 
-Can be done inside `CMakePresets.json`
+Alternative method is to set it inside `CMakePresets.json`
           
 ```json
     "environment":
@@ -22,4 +38,5 @@ Can be done inside `CMakePresets.json`
     }
 ```
 replace `PATH`
+one for each OS base preset
 

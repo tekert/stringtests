@@ -24,7 +24,7 @@ std::string LoremIpsumStr{ "Lorem ipsum dolor sit amet, consectetur adipiscing e
 "irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. "
 "Excepteur sint occaecat cupidatatsuperlongword non proident, sunt in culpa qui officia deserunt mollit anim id est laborum." };
 
-// stringview to split
+// stringview
 std::string_view LoremIpsumStrv;
 
 // delims used to split the string (repeated delims are used to measure performance in other areas)
@@ -612,7 +612,9 @@ void setup_strings()
 
 	// convert to other types
 	LoremIpsumStrv  = LoremIpsumStr;
+#if ENABLE_BOOST_TESTS
 	LoremIpsumbStrv = LoremIpsumStr;
+#endif
 }
 
 int main(int argc, char* argv[])

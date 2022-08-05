@@ -17,22 +17,22 @@
 
 #include <benchmark/benchmark.h>
 
-// string to split
-const std::string_view LoremIpsumStrv{ "Lorem ipsum dolor sit amet, consectetur adipiscing elit, "
+// std:string
+std::string LoremIpsumStr{ "Lorem ipsum dolor sit amet, consectetur adipiscing elit, "
 "sed do eiusmod tempor incididuntsuperlongwordsuper ut labore et dolore magna aliqua. Ut enim ad minim veniam, "
 "quis nostrud exercitation ullamco laboris nisi ut aliquipsuperlongword ex ea commodo consequat. Duis aute "
 "irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. "
 "Excepteur sint occaecat cupidatatsuperlongword non proident, sunt in culpa qui officia deserunt mollit anim id est laborum." };
 
-// std:string type
-const std::string LoremIpsumStr{ LoremIpsumStrv };
+// stringview to split
+std::string_view LoremIpsumStrv;
 
 // delims used to split the string (repeated delims are used to measure performance in other areas)
 auto g_delim = " orzabcd<eeeeeeeeeeeeeeeeeeee";
 
 #if ENABLE_BOOST_TESTS
 // boost::string_view type
-const boost::string_view LoremIpsumbStrv{ LoremIpsumStrv.data(), LoremIpsumStrv.size() };
+boost::string_view LoremIpsumbStrv;
 const boost::string_view g_bdelim{ g_delim };
 #endif
 
@@ -604,15 +604,28 @@ static void BM_default_searcher(benchmark::State& state)
 	}
 }
 
+void setup_strings()
+{
+	// make it bigger
+	for (int i = 0; i < 10; i++)
+		LoremIpsumStr.append(LoremIpsumStr);
+
+	// convert to other types
+	LoremIpsumStrv  = LoremIpsumStr;
+	LoremIpsumbStrv = LoremIpsumStr;
+}
+
 int main(int argc, char* argv[])
 {
-	std::cout << "Hello CMake." << std::endl;
+	std::cout << "Split String tests" << std::endl;
 
 	std::vector<const char*> new_argv(argv, argv + argc);
 	new_argv.push_back("--benchmark_repetitions=1"); argc += 1;
 	//new_argv.push_back("--benchmark_min_time=1"); argc += 1;
 	new_argv.push_back(nullptr);
 	argv = const_cast<char**>(new_argv.data()); // or &new_argv[0] if you are using an old compiler
+
+	setup_strings();
 
 	//BENCHMARK(BM_boyer_moore_searcher);
 	//BENCHMARK(BM_boyer_moore_horspool_searcher);

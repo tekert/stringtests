@@ -2,7 +2,7 @@
 # project specific logic here.
 #
 # Add source to this project's executable.
-add_executable (stringtests "stringtests.cpp" "stringtests.h")
+add_executable (stringtests "stringtests.cpp" "stringtests.h" "nasm.asm" "cstringtest.c")
 
 # MSVC: link with dynamic standard libs
 set_property(TARGET stringtests PROPERTY
@@ -13,6 +13,7 @@ set_property(TARGET stringtests PROPERTY
 #  set_property(TARGET stringtests PROPERTY CXX_STANDARD 20)
 #endif()
 
+# Benchmark Google lib
 find_package(benchmark CONFIG REQUIRED)
 target_link_libraries(stringtests PRIVATE benchmark::benchmark benchmark::benchmark_main)
 
@@ -25,6 +26,16 @@ else()
     target_compile_definitions(stringtests PUBLIC ENABLE_BOOST_TESTS=0)
     message( AUTHOR_WARNING "Boost not Found, disabling some tests" )
 endif()
+
+# fmt lib
+#find_package(fmt)
+#if ( fmt_FOUND )
+#target_compile_definitions(stringtests PUBLIC ENABLE_FMT_TESTS=1)
+#    target_link_libraries(stringtests PRIVATE fmt::fmt-header-only)
+#else()
+#    target_compile_definitions(stringtests PUBLIC ENABLE_FMT_TESTS=0)
+#    message( AUTHOR_WARNING "fmt not Found, disabling some tests" )
+#endif()
 
 # Test messages
 foreach(Component ${BoostComponents})

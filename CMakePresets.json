@@ -5,12 +5,8 @@
     [
         {
             "name": "ninja-verbose",
-            "configurePreset": "default-base",
+            "configurePreset": "release-linux",
             "verbose": true
-            /*"nativeToolOptions":
-            [
-                "-v"
-            ]*/
         }
     ],
 
@@ -38,13 +34,21 @@
                     "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
                     "type": "FILEPATH"
                 },
-                "VCPKG_TARGET_TRIPLET": "x64-windows-static-md"
+                "VCPKG_TARGET_TRIPLET": "x64-windows-static-md",
+                "VCPKG_PREFER_SYSTEM_LIBS": true
             },
             "condition":
             {
                 "type": "equals",
                 "lhs": "${hostSystemName}",
                 "rhs": "Windows"
+            },
+            "vendor":
+            {
+                "microsoft.com/VisualStudioSettings/CMake/1.0":
+                {
+                    "hostOS": "Windows"
+                }
             },
             "environment":
             {
@@ -91,7 +95,6 @@
                 "CMAKE_BUILD_TYPE": "Debug"
             }
         },
-
         {
             "name": "x86-release",
             "displayName": "x86 Release",
@@ -123,6 +126,10 @@
             },
             "vendor":
             {
+                "microsoft.com/VisualStudioSettings/CMake/1.0":
+                {
+                    "hostOS": "Linux"
+                },
                 "microsoft.com/VisualStudioRemoteSettings/CMake/1.0":
                 {
                     "sourceDir": "$env{HOME}/.vs/$ms{projectDirName}",
@@ -135,18 +142,18 @@
             }
         },
         {
-            "name": "linux-debug",
+            "name": "debug-linux",
             "displayName": "Linux Debug",
-            "inherits":"linux-base",
+            "inherits": "linux-base",
             "cacheVariables":
             {
                 "CMAKE_BUILD_TYPE": "Debug"
             }
         },
         {
-            "name": "linux-release",
+            "name": "release-linux",
             "displayName": "Linux Release",
-            "inherits": "linux-base",
+            "inherits": "debug-linux",
             "cacheVariables":
             {
                 "CMAKE_BUILD_TYPE": "Release"

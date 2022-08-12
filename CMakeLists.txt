@@ -5,6 +5,13 @@ cmake_minimum_required (VERSION 3.10)
 
 project ("stringtests" VERSION 0.01)
 
+include(CheckLanguage)
+check_language(ASM_NASM)
+if(CMAKE_ASM_NASM_COMPILER)
+  enable_language(ASM_NASM)
+else()
+  message(AUTHOR_WARNING "No ASM_NASM support, disabling some tests")
+endif()
 
 ################### OUTPUT DIRS ##############################
 
@@ -16,8 +23,9 @@ message(STATUS CMAKE_BUILD_TYPE =	${CMAKE_BUILD_TYPE})
 message(STATUS "${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE}${platform_bits}")
 message(STATUS DCMAKE_TOOLCHAIN_FILE = ${DCMAKE_TOOLCHAIN_FILE})
 
-# Default to c++17 min for linux (string_view), works on mscv in cmake > 3.10
-set(CMAKE_CXX_STANDARD 17)
+# Default to c++17 mininimum for linux (string_view), works on mscv in cmake > 3.10
+# need c++20 for ranges tests
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 

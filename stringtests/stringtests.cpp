@@ -1,5 +1,15 @@
 ﻿// stringtests.cpp : Defines the entry point for the application.
 //
+// Measures string delimiter parseing performance for different algoritms.
+// Outputs to a vector the strings resulting after extracting any of the delimiters
+// Each delimiter must be a char, there can be multiple delimiters stored in the array (=string).
+
+// MSVC has a performance pitfall with 'string_view::find_first_of' being ~20% slower than 'std::find_first_of'
+// (same with 'string::find_first_of') wich doesn't make sense, there is an extra reference that must be handled each time
+//	on 'std::find_first_of', thus it should be have slightly worse performance, not the other way around.
+// Compare {splitS} to {splitS_Std}  OR  {splitSV} to {splitSV_Std}
+
+// Clang and GCC dont have this problem.
 
 //#define ENABLE_BOOST_TESTS 0
 
@@ -11,6 +21,8 @@
 #include <algorithm>
 #include <sstream>
 #include <ranges>
+#include <cmath>
+#include <fstream>
 
 #include <iomanip>
 
@@ -23,14 +35,16 @@
 #include <benchmark/benchmark.h>
 
 // std:string
-std::string LoremIpsumStr{ "Lorem ipsum dolor sit amet, consectetur adipiscing elit, "
+//TODO: remove, this is now read from local file.
+const std::string_view g_base_strv{ "Lorem ipsum dolor sit amet, consectetur adipiscing elit, "
 "sed do eiusmod tempor incididuntsuperlongwordsuper ut labore et dolore magna aliqua. Ut enim ad minim veniam, "
 "quis nostrud exercitation ullamco laboris nisi ut aliquipsuperlongword ex ea commodo consequat. Duis aute "
 "irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. "
 "Excepteur sint occaecat cupidatatsuperlongword non proident, sunt in culpa qui officia deserunt mollit anim id est laborum." };
 
-// stringview
-std::string_view LoremIpsumStrv;
+// NOLINTBEGIN
+std::string g_big_str;
+std::string g_big_strv;
 
 // delims used to split the string (repeated delims are used to measure performance in other areas)
 const std::string g_delim = " orzabcd<eeeeeeeeeeeeeeeeeeee";
@@ -42,7 +56,7 @@ const char* delims_c_str = g_delim.c_str();
 
 #if ENABLE_BOOST_TESTS
 // boost::string_view type
-boost::string_view LoremIpsumbStrv;
+boost::string_view g_big_boost_strv;
 const boost::string_view g_bdelim{ g_delim };
 #endif
 
@@ -50,13 +64,51 @@ extern "C" {
 	char** split_fromc(const char* str, const size_t strlen, const char* delims);
 	void setup_c_out(const size_t strlen);
 };
+// NOLINTEND
+
+void setup_strings()
+{
+	std::ifstream myfile;
+	const std::string location = "../../stringtests/string_base.txt";
+	myfile.open(location, std::ios::in);
+	if (!myfile)
+	{
+		std::cout << "No such file, " + location;
+		exit(1);
+	}
+
+	std::ostringstream ss;
+	ss << myfile.rdbuf();
+	std::string base_strv = ss.str();
+
+
+	myfile.close();
+
+	// make it bigger
+	auto times = pow(2, 15);
+	// 9223372036854775807
+	// 1048576 * 489 = 512.753.664
+	g_big_str.reserve(base_strv.length()* times);
+
+	for (int i = 0; i < times; i++)
+		g_big_str.append(base_strv);
+	//const_cast<std::string&>(g_big_str);
+
+	// convert to other types
+	g_big_strv = g_big_str;
+#if ENABLE_BOOST_TESTS
+	g_big_boost_strv = g_big_str;
+#endif
+}
+
+
 
 // Custom made functions
 
 std::vector<std::string_view> SplitSV_custom1(const std::string_view str, const std::string_view delims = " or")
 {
 	std::vector<std::string_view> result;
-	result.reserve(str.length() / 2);
+	result.reserve(str.length());
 
 	int index = 0;
 	int length;
@@ -87,7 +139,7 @@ std::vector<std::string_view> SplitSV_custom1(const std::string_view str, const 
 std::vector<std::string_view> SplitSV_custom2(const std::string_view str, const std::string_view delims = " or")
 {
 	std::vector<std::string_view> result;
-	result.reserve(str.length() / 2);
+	result.reserve(str.length());
 
 	auto index = 0;
 	int length;
@@ -152,7 +204,7 @@ std::vector<std::string_view> SplitSV_custom3(const std::string_view str, const 
 std::vector<std::string_view> splitSV_custom4a(const std::string_view str, const std::string_view delimeters = "or")
 {
 	std::vector<std::string_view> res;
-	res.reserve(str.length() / 2);
+	res.reserve(str.length());
 	const char* ptr = str.data();
 	size_t size = 0;
 
@@ -182,7 +234,7 @@ std::vector<std::string_view> splitSV_custom4a(const std::string_view str, const
 std::vector<std::string_view> splitSV_custom4b(const std::string_view str, const std::string_view delimeters = "or")
 {
 	std::vector<std::string_view> res;
-	res.reserve(str.length() / 2);
+	res.reserve(str.length());
 	const char* ptr = str.data();
 	size_t size = 0;
 
@@ -195,7 +247,7 @@ std::vector<std::string_view> splitSV_custom4b(const std::string_view str, const
 				if (size)
 					res.emplace_back(ptr, size);
 				ptr += size + 1;
-				size = -1; // extra intruction every time this if happens (bad)
+				size = -1; // extra instruction every time this if happens (bad)
 				break;
 			}
 		}
@@ -207,24 +259,10 @@ std::vector<std::string_view> splitSV_custom4b(const std::string_view str, const
 	return res;
 }
 
-inline static bool IsDelim(const char tst, const char* DELIMS)
-{
-	//const char* DELIMS = " \n\t\r\f";
-	//const char* DELIMS = g_delim;
-	do // Delimiter string cannot be empty, so don't check for it
-	{
-		if (tst == *DELIMS)
-			return true;
-		++DELIMS;
-	} while (*DELIMS);
-
-	return false;
-}
-
 std::vector<std::string> split_Cway(const std::string& str, const std::string& delims = "or")
 {
 	std::vector<std::string> output;
-	output.reserve(str.length() / 2);
+	output.reserve(str.length());
 
 	const char* p = str.c_str();
 	const char* delim = delims.c_str();
@@ -245,7 +283,7 @@ std::vector<std::string> split_Cway(const std::string& str, const std::string& d
 			}
 		}
 		size++;
-	aca: 
+	aca:
 		p++;
 	}
 	if (size) {
@@ -255,10 +293,24 @@ std::vector<std::string> split_Cway(const std::string& str, const std::string& d
 	return output;
 }
 
+constexpr static bool IsDelim(const char tst, const char* DELIMS)
+{
+	//const char* DELIMS = " \n\t\r\f";
+	//const char* DELIMS = g_delim;
+	do // Delimiter string cannot be empty, so don't check for it
+	{
+		if (tst == *DELIMS)
+			return true;
+		++DELIMS;
+	} while (*DELIMS);
+
+	return false;
+}
+
 std::vector<std::string> split_Cway2(const std::string& str, const std::string& delims = "or")
 {
 	std::vector<std::string> output;
-	output.reserve(str.length() / 2);
+	output.reserve(str.length());
 
 	const char* p = str.c_str();
 	const char* delim = delims.c_str();
@@ -276,7 +328,7 @@ std::vector<std::string> split_Cway2(const std::string& str, const std::string& 
 		else
 			size++;
 		p++;
-	} 
+	}
 	if (size) {
 		output.emplace_back(p - size, size);
 	}
@@ -309,7 +361,7 @@ std::vector<std::string> split_S_boostToken(const std::string& strv, const std::
 std::vector<std::string> splitS(const std::string& str, const std::string& delims = "or")
 {
 	std::vector<std::string> output;
-	output.reserve(str.length() / 2);
+	output.reserve(str.length());
 	size_t first = 0;
 	const auto last = str.size();
 
@@ -333,7 +385,7 @@ std::vector<std::string> splitS(const std::string& str, const std::string& delim
 std::vector<std::string> splitS_Std(const std::string& str, const std::string& delims = "or")
 {
 	std::vector<std::string> output;
-	output.reserve(str.length() / 2);
+	output.reserve(str.length());
 	auto first = std::cbegin(str);
 	const auto last = std::cend(str);
 
@@ -527,12 +579,12 @@ std::vector<std::string_view> split_SVStdfi(const std::string_view strv, const s
 			++_delim;
 		} while (*_delim);
 
-		return false; 
+		return false;
 	};
 
 	auto next = std::find_if(start, end, is_even);
 
-	while (next != end) 
+	while (next != end)
 	{
 		if ((next - start) > 0)
 			results.emplace_back(start, next);
@@ -576,12 +628,23 @@ std::vector<std::string_view> a(const std::string_view strv, const std::string_v
 
 static void bench_split_Cway(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = split_Cway(LoremIpsumStr, g_delim);
+		auto v = split_Cway(g_big_str, g_delim);
+		benchmark::DoNotOptimize(v);
+	}
+}
+
+static void bench_split_Cway2(benchmark::State& state) {
+	for (auto _ : state) {
+		auto v = split_Cway2(g_big_str, g_delim);
 		benchmark::DoNotOptimize(v);
 	}
 }
 
 static void bench_split_fromc(benchmark::State& state) {
+	lorem_c_str = g_big_str.c_str();
+	lorem_c_str_lenght = g_big_str.length();
+	setup_c_out(lorem_c_str_lenght);
+
 	for (auto _ : state) {
 		auto v = split_fromc(lorem_c_str, lorem_c_str_lenght, delims_c_str);
 		benchmark::DoNotOptimize(v);
@@ -590,7 +653,7 @@ static void bench_split_fromc(benchmark::State& state) {
 
 static void bench_split_SV(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = split_SV(LoremIpsumStrv, g_delim);
+		auto v = split_SV(g_big_strv, g_delim);
 		benchmark::DoNotOptimize(v);
 	}
 }
@@ -599,21 +662,21 @@ static void bench_split_SV(benchmark::State& state) {
 #if ENABLE_BOOST_TESTS
 static void bench_split_S_boostToken(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = split_S_boostToken(LoremIpsumStr, g_delim);
+		auto v = split_S_boostToken(g_big_str, g_delim);
 		benchmark::DoNotOptimize(v);
 	}
 }
 
 static void bench_split_SV_Boost(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = split_SV_Boost(LoremIpsumbStrv, g_bdelim);
+		auto v = split_SV_Boost(g_big_boost_strv, g_bdelim);
 		benchmark::DoNotOptimize(v);
 	}
 }
 
 static void bench_split_SV_BoostSplit(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = split_SV_BoostSplit(LoremIpsumbStrv, g_delim);
+		auto v = split_SV_BoostSplit(g_big_boost_strv, g_delim);
 		benchmark::DoNotOptimize(v);
 	}
 }
@@ -621,84 +684,84 @@ static void bench_split_SV_BoostSplit(benchmark::State& state) {
 
 static void bench_split_SV_Ptr(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = split_SV_Ptr(LoremIpsumStrv, g_delim);
+		auto v = split_SV_Ptr(g_big_strv, g_delim);
 		benchmark::DoNotOptimize(v);
 	}
 }
 
 static void bench_split_SV_Std(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = split_SV_Std(LoremIpsumStrv, g_delim);
+		auto v = split_SV_Std(g_big_strv, g_delim);
 		benchmark::DoNotOptimize(v);
 	}
 }
 
 static void bench_split_SV2(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = split_SV2(LoremIpsumStrv, g_delim);
+		auto v = split_SV2(g_big_strv, g_delim);
 		benchmark::DoNotOptimize(v);
 	}
 }
 
 static void bench_splitS(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = splitS(LoremIpsumStr, g_delim);
+		auto v = splitS(g_big_str, g_delim);
 		benchmark::DoNotOptimize(v);
 	}
 }
 
 static void bench_splitS_Std(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = splitS_Std(LoremIpsumStr, g_delim);
+		auto v = splitS_Std(g_big_str, g_delim);
 		benchmark::DoNotOptimize(v);
 	}
 }
 
 static void bench_splitS_Std_Ptr(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = splitS_Std_Ptr(LoremIpsumStr, g_delim);
+		auto v = splitS_Std_Ptr(g_big_str, g_delim);
 		benchmark::DoNotOptimize(v);
 	}
 }
 
 static void bench_SplitSV_custom1(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = SplitSV_custom1(LoremIpsumStrv, g_delim);
+		auto v = SplitSV_custom1(g_big_strv, g_delim);
 		benchmark::DoNotOptimize(v);
 	}
 }
 
 static void bench_SplitSV_custom2(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = SplitSV_custom2(LoremIpsumStrv, g_delim);
+		auto v = SplitSV_custom2(g_big_strv, g_delim);
 		benchmark::DoNotOptimize(v);
 	}
 };
 
 static void bench_SplitSV_custom3(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = SplitSV_custom3(LoremIpsumStrv, g_delim);
+		auto v = SplitSV_custom3(g_big_strv, g_delim);
 		benchmark::DoNotOptimize(v);
 	}
 }
 
 static void bench_splitSV_custom4a(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = splitSV_custom4a(LoremIpsumStrv, g_delim);
+		auto v = splitSV_custom4a(g_big_strv, g_delim);
 		benchmark::DoNotOptimize(v);
 	}
 }
 
 static void bench_splitSV_custom4b(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = splitSV_custom4b(LoremIpsumStrv, g_delim);
+		auto v = splitSV_custom4b(g_big_strv, g_delim);
 		benchmark::DoNotOptimize(v);
 	}
 }
 
 static void bench_split_SVStdfi(benchmark::State& state) {
 	for (auto _ : state) {
-		auto v = split_SVStdfi(LoremIpsumStrv, g_delim);
+		auto v = split_SVStdfi(g_big_strv, g_delim);
 		benchmark::DoNotOptimize(v);
 	}
 }
@@ -706,6 +769,7 @@ static void bench_split_SVStdfi(benchmark::State& state) {
 
 // Custom splits
 BENCHMARK(bench_split_Cway);
+BENCHMARK(bench_split_Cway2);
 BENCHMARK(bench_split_fromc);
 BENCHMARK(bench_SplitSV_custom1);
 BENCHMARK(bench_SplitSV_custom2);
@@ -736,7 +800,7 @@ BENCHMARK(bench_split_SV_BoostSplit);
 
 //std::string needle = "aliquipsuperlongword";
 std::string needle = g_delim;
-const std::string testString{ LoremIpsumStrv };
+const std::string testString{ g_base_strv };
 static void BM_boyer_moore_searcher(benchmark::State& state)
 {
 	for (auto _ : state)
@@ -776,35 +840,18 @@ static void BM_default_searcher(benchmark::State& state)
 	}
 }
 
-void setup_strings()
-{
-	// make it bigger
-	for (int i = 0; i < 10; i++)
-		LoremIpsumStr.append(LoremIpsumStr);
-
-	// convert to other types
-	LoremIpsumStrv  = LoremIpsumStr;
-#if ENABLE_BOOST_TESTS
-	LoremIpsumbStrv = LoremIpsumStr;
-#endif
-
-	lorem_c_str = LoremIpsumStr.c_str();
-	lorem_c_str_lenght = LoremIpsumStr.length();
-	delims_c_str = g_delim.c_str();
-	setup_c_out(lorem_c_str_lenght);
-}
 
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
 
-extern "C" void hello_from_asm();
+//extern "C" void hello_from_asm();
 
 int main(int argc, char* argv[])
 {
 	std::cout << "Split String tests" << std::endl;
 	//__debugbreak();
-	hello_from_asm();
+	//hello_from_asm();
 	//__debugbreak();
 
 #ifdef _WINDOWS
@@ -817,8 +864,9 @@ int main(int argc, char* argv[])
 #endif
 
 	std::vector<const char*> new_argv(argv, argv + argc);
-	new_argv.push_back("--benchmark_repetitions=1"); argc += 1;
-	//new_argv.push_back("--benchmark_min_time=1"); argc += 1;
+	new_argv.push_back("--benchmark_repetitions=9"); argc += 1;
+	//new_argv.push_back("--benchmark_min_time=0.1"); argc += 1;
+	new_argv.push_back("--benchmark_enable_random_interleaving=true"); argc += 1;
 	new_argv.push_back(nullptr);
 	argv = const_cast<char**>(new_argv.data()); // or &new_argv[0] if you are using an old compiler
 
@@ -839,27 +887,27 @@ int main(int argc, char* argv[])
 		std::cout << v0[i] << " ";
 	std::cout << std::endl;
 
-	auto v = split_Cway(LoremIpsumStr, g_delim);
+	auto v = split_Cway(g_base_str, g_delim);
 	for (auto a : v)
 		std::cout << a << " ";
 	std::cout << std::endl;
 
-	auto v1 = split_SV(LoremIpsumStrv, g_delim);
+	auto v1 = split_SV(g_base_strv, g_delim);
 	for (auto a : v1)
 		std::cout << a << " ";
 	std::cout << std::endl;
 
-	auto v2 = split_SV2(LoremIpsumStr, g_delim);
+	auto v2 = split_SV2(g_base_str, g_delim);
 	for (auto a : v2)
 		std::cout << a << " ";
 	std::cout << std::endl;
 
-	auto v3 = split_SV_Std(LoremIpsumStr, g_delim);
+	auto v3 = split_SV_Std(g_base_str, g_delim);
 	for (auto a : v3)
 		std::cout << a << " ";
 	std::cout << std::endl;
 #endif
-		
+
 
 	//system("PAUSE");
 

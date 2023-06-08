@@ -23,7 +23,7 @@ char** split_fromc(const char* str, const size_t strlen, const char* delims)
 {
 	//char** output = (char**)calloc(strlen/2 +1, sizeof(char*));
 	//char** output = (char**)malloc((strlen / 2 + 1) * sizeof(char*));
-	//free_c_strs(output);
+	free_c_strs(output);
 
 	size_t i = 0;
 	size_t size = 0;

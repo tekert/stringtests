@@ -3,9 +3,12 @@
 #
 # Add source to this project's executable.
 add_executable (stringtests "stringtests.cpp" "stringtests.h" "nasm.asm" "cstringtest.c")
+add_executable (stringtests_noasm "stringtests.cpp" "stringtests.h" "cstringtest.c")
+
+#set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "stringtest_nasm")
 
 # MSVC: link with dynamic standard libs
-set_property(TARGET stringtests PROPERTY
+set_property(TARGET stringtests stringtests_noasm PROPERTY
   MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 #set_property(TARGET stringtests PROPERTY CXX_STANDARD 17)
@@ -16,14 +19,17 @@ set_property(TARGET stringtests PROPERTY
 # Benchmark Google lib
 find_package(benchmark CONFIG REQUIRED)
 target_link_libraries(stringtests PRIVATE benchmark::benchmark benchmark::benchmark_main)
+target_link_libraries(stringtests_noasm PRIVATE benchmark::benchmark benchmark::benchmark_main)
 
 # Find boost headers (any version)
 find_package(Boost QUIET)
 if ( Boost_FOUND )
     target_compile_definitions(stringtests PUBLIC ENABLE_BOOST_TESTS=1)
+    target_compile_definitions(stringtests_noasm PUBLIC ENABLE_BOOST_TESTS=1)
     target_include_directories(stringtests PRIVATE ${Boost_INCLUDE_DIRS})
 else()
     target_compile_definitions(stringtests PUBLIC ENABLE_BOOST_TESTS=0)
+    target_compile_definitions(stringtests_noasm PUBLIC ENABLE_BOOST_TESTS=0)
     message( AUTHOR_WARNING "Boost not Found, disabling some tests" )
 endif()
 

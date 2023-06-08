@@ -15,7 +15,7 @@ hello_from_asm:
     sub     rsp, 32
 
     lea     rcx, [msg]
-    call    puts wrt ..plt
+    call    puts
 
     xor     rax, rax
     leave

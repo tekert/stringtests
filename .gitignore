@@ -395,3 +395,9 @@ FodyWeavers.xsd
 *.exe
 *.out
 *.app
+
+.vscode
+
+# clangd
+/build
+.clangd

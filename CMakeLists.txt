@@ -16,12 +16,12 @@ endif()
 ################### OUTPUT DIRS ##############################
 
 math(EXPR platform_bits "${CMAKE_SIZEOF_VOID_P} * 8")
-set(platform_dir ${CMAKE_SYSTEM_NAME}${platform_bits}-${CMAKE_CXX_COMPILER_ID}${CMAKE_CXX_COMPILER_VERSION})
+set(platform_dir ${CMAKE_SYSTEM_NAME}x${platform_bits}-${CMAKE_CXX_COMPILER_ID}${CMAKE_CXX_COMPILER_VERSION})
 
 message(STATUS platform_dir =	${platform_dir})
 message(STATUS CMAKE_BUILD_TYPE =	${CMAKE_BUILD_TYPE})
 message(STATUS "${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE}${platform_bits}")
-message(STATUS DCMAKE_TOOLCHAIN_FILE = ${DCMAKE_TOOLCHAIN_FILE})
+message(STATUS CMAKE_TOOLCHAIN_FILE = ${CMAKE_TOOLCHAIN_FILE})
 
 # Default to c++17 mininimum for linux (string_view), works on mscv in cmake > 3.10
 # need c++20 for ranges tests

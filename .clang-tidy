@@ -11,6 +11,7 @@ Checks: "
   cppcoreguidelines-*,
   performance-*,
   boost-*,
+  abseil-*
   -cppcoreguidelines-avoid-magic-numbers,
   -modernize-use-trailing-return-type,
   -bugprone-easily-swappable-parameters"

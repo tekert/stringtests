@@ -6,6 +6,10 @@
     [
         "benchmark",
         "boost-utility",
-        "boost-tokenizer"
+        "boost-tokenizer",
+        {
+            "name": "abseil",
+            "features": [ "cxx17" ]
+        }
     ]
 }
